@@ -45,7 +45,7 @@ pub fn Callback() -> Element {
         };
 
         // 4. Generate and store session token
-        match generate_session_token().await {
+        match generate_session_token(&access_token, &refresh_token).await {
             Ok(_) => {
                 info!("Authentication successful");
                 nav.replace(Routes::Protected {});

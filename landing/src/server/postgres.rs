@@ -125,9 +125,11 @@ sqlx::query(
         }
 
         // Generate new session token
-        // First get these tokens from somewhere (e.g., an authentication API)
+        // Retrieve or generate access and refresh tokens
+        let access_token = "generated_access_token"; // Replace with actual token generation logic
+        let refresh_token = "generated_refresh_token"; // Replace with actual token generation logic
 
-        let token = generate_session_token().await?;        
+        let token = generate_session_token(access_token, refresh_token).await?;
 
         // Calculate expiration time (e.g., 30 days from now)
         let expires_at = Utc::now() + Duration::days(30);

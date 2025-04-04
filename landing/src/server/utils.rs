@@ -14,23 +14,46 @@ use crate::server::error::AuthError;
 /// 
 /// # Returns
 /// `Result<String, AuthError>` - The generated session token or error
-pub async fn generate_session_token() -> Result<String, AuthError> {
-    let session_token: String = rand::thread_rng()
-        .sample_iter(Alphanumeric)
-        .take(32)
-        .map(char::from)
-        .collect();
-    
-    let encoded_token = general_purpose::URL_SAFE_NO_PAD.encode(session_token.as_bytes());
+#[cfg(target_arch = "wasm32")]
+pub async fn generate_session_token(access_token: &str, refresh_token: &str) -> Result<String, AuthError> {
+    use web_sys::window;
+
+    let session_token = generate_random_token(); // Your token generation logic
     
     if let Some(window) = window() {
         if let Ok(Some(storage)) = window.local_storage() {
-            storage.set_item("session_token", &encoded_token)
+            storage.set_item("access_token", access_token)
+                .map_err(|_| AuthError::TokenStorageFailed)?;
+            storage.set_item("refresh_token", refresh_token)
+                .map_err(|_| AuthError::TokenStorageFailed)?;
+            storage.set_item("session_token", &session_token)
                 .map_err(|_| AuthError::TokenStorageFailed)?;
         }
     }
+    Ok(session_token)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn generate_session_token(access_token: &str, refresh_token: &str) -> Result<String, AuthError> {
+    // For desktop/native targets, use a different storage method
+    // Example: File system, SQLite, or system keychain
+    let session_token = generate_random_token();
     
-    Ok(encoded_token)
+    // Implement native storage here (example using `keyring` crate)
+    let entry = keyring::Entry::new("your_app", "access_token")
+        .map_err(|_| AuthError::TokenStorageFailed)?;
+    entry.set_password(access_token)
+        .map_err(|_| AuthError::TokenStorageFailed)?;
+    
+    Ok(session_token)
+}
+
+pub fn generate_random_token() -> String {
+    rand::rng()
+        .sample_iter(&Alphanumeric)
+        .take(30)
+        .map(char::from)
+        .collect()
 }
 
 pub fn verify_password(password: &str, hash: &str) -> bool {

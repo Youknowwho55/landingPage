@@ -19,3 +19,14 @@ DATABASE_URL=postgres://test:test@localhost/test cargo test auth
 # Run specific test
 
 DATABASE_URL=postgres://test:test@localhost/test cargo test test_user_creation
+
+dx serve --platform desktop
+
+# Frontend (WASM)
+
+cargo build --bin client --release --target wasm32-unknown-unknown
+trunk build --release
+
+# Backend (Native)
+
+cargo build --bin server --release

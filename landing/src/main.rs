@@ -8,6 +8,7 @@ use sqlx::migrate::Migrator;
 mod db;
 use std::path::Path;
 mod server;
+use log::info;
 use anyhow::Result;
 use crate::views::routes::{GuardContext, Router as AppRouter, Routes};
 
