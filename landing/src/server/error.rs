@@ -14,4 +14,6 @@ pub enum AuthError {
     PasswordRequirements,
     #[error("Invalid email")]
     InvalidEmail,
+    #[error("Token Sorage Error")]
+    TokenStorageFailed,
 }

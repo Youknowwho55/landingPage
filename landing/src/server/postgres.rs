@@ -58,15 +58,16 @@ impl AuthProvider for PostgresAuth {
             return Err(AuthError::PasswordRequirements);
         }
 
-        let client = self.pool.acquire().await.map_err(|_| AuthError::DatabaseError)?;
+        let mut client = self.pool.acquire().await.map_err(|_| AuthError::DatabaseError)?;
         
         // Check if user already exists
-        let exists: bool = client.query_one(
-            "SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)",
-            &[&email]
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)"
         )
-        .map_err(|_| AuthError::DatabaseError)?
-        .get(0);
+        .bind(email)
+        .fetch_one(&mut *client)
+        .await
+        .map_err(|_| AuthError::DatabaseError)?;
 
         if exists {
             return Err(AuthError::UserExists);
@@ -77,11 +78,15 @@ impl AuthProvider for PostgresAuth {
             .map_err(|_| AuthError::DatabaseError)?;
 
         // Insert new user record
-        client.execute(
-            "INSERT INTO users (email, password_hash) VALUES ($1, $2)",
-            &[&email, &hashed_password]
-        )
-        .map_err(|_| AuthError::DatabaseError)?;
+// Insert new user record
+sqlx::query(
+    "INSERT INTO users (email, password_hash) VALUES ($1, $2)"
+)
+.bind(email)
+.bind(hashed_password)
+.execute(&mut *client)
+.await
+.map_err(|_| AuthError::DatabaseError)?;
 
         Ok(())
     }
@@ -94,8 +99,9 @@ impl AuthProvider for PostgresAuth {
     /// 3. Generates new session token
     /// 4. Stores session in database with 30-day expiration
     async fn authenticate(&self, email: &str, password: &str) -> Result<User, AuthError> {
-        let mut client = self.pool.lock().await;
+        let mut client = self.pool.acquire().await.map_err(|_| AuthError::DatabaseError)?;
         
+
         // Retrieve user from database
         let db_user: DbUser = match client.query_one(
             "SELECT id, email, password_hash FROM users WHERE email = $1",

@@ -5,7 +5,7 @@ mod error;
 mod provider;
 mod postgres;  // Add this for PostgresAuth
 mod models;
-mod utils;
+pub mod utils;
 pub mod context;  // Keep pub if you want it accessible outside the auth module
 
 // Re-exports
@@ -28,3 +28,4 @@ pub mod prelude {
         // Include AuthContext only if you want it in the prelude
     };
 }
+

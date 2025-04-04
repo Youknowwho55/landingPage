@@ -9,7 +9,7 @@ use crate::components::{Navbar, Login, Protected};
 use crate::server::AuthContext;
 use std::sync::Arc;
 
-#[derive(Clone, Routable, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Routable, Debug, PartialEq, serde::Serialize,)]
 pub enum Routes {
     #[layout(Wrapper)]
     #[route("/")]
@@ -126,24 +126,3 @@ where
     }
 }
 
-/// Declare a page view protected
-///
-/// Automatically redirect users to login and back to the page on auth success
-pub fn protected(redirect: Routes, next: Routes) {
-    #[cfg(target_arch = "wasm32")]
-    {
-        spawn(async move {
-            let user = get_user().await;
-            if user.is_err() {
-                GuardContext::set_next(next);
-                let nav = navigator();
-                nav.replace(redirect);
-            }
-        });
-    }
-    
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        // Do nothing or implement alternative behavior for non-WASM targets
-    }
-}
