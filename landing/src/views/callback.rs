@@ -9,7 +9,7 @@ pub fn Callback() -> Element {
     let nav = use_navigator();
 
     spawn(async move {
-        // 1. Extract hash from URL
+        // 1. Extract and parse hash from URL
         let hash = match window()
             .and_then(|w| w.location().hash().ok())
             .filter(|h| !h.is_empty())
@@ -17,42 +17,42 @@ pub fn Callback() -> Element {
             Some(h) => h,
             None => {
                 error!("No hash found in URL");
+                nav.replace(Routes::Login {});
                 return;
             }
         };
 
         // 2. Parse URL parameters
-        let params: std::collections::HashMap<String, String> = match serde_urlencoded::from_str::<Vec<(String, String)>>(
-            hash.strip_prefix('#').unwrap_or(&hash)
-        ) {
-            Ok(p) => p.into_iter().collect(),
-            Err(e) => {
-                error!("Failed to parse URL parameters: {}", e);
-                return;
-            }
-        };
+        let params: std::collections::HashMap<String, String> = 
+            serde_urlencoded::from_str(hash.strip_prefix('#').unwrap_or(&hash))
+                .map_err(|e| {
+                    error!("Failed to parse URL parameters: {}", e);
+                    e
+                })
+                .unwrap_or_default();
 
         // 3. Extract tokens
         let (access_token, refresh_token) = match (
-            params.get("access_token"),
-            params.get("refresh_token")
+            params.get("access_token").cloned(),
+            params.get("refresh_token").cloned()
         ) {
-            (Some(access), Some(refresh)) => (access.to_owned(), refresh.to_owned()),
+            (Some(access), Some(refresh)) => (access, refresh),
             _ => {
-                error!("Missing access_token or refresh_token");
+                error!("Missing tokens in URL");
+                nav.replace(Routes::Login {});
                 return;
             }
         };
 
         // 4. Generate and store session token
-        match generate_session_token(access_token, refresh_token).await {
+        match generate_session_token().await {
             Ok(_) => {
-                info!("Session tokens generated successfully");
+                info!("Authentication successful");
                 nav.replace(Routes::Protected {});
             },
             Err(e) => {
-                error!("Failed to generate session token: {}", e);
-                // Consider redirecting to login page here
+                error!("Authentication failed: {}", e);
+                nav.replace(Routes::Login {});
             }
         }
     });

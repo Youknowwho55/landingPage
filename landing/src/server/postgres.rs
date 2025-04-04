@@ -9,6 +9,7 @@ use crate::{
 };
 use bcrypt::{hash, DEFAULT_COST};
 use chrono::{Duration, Utc};
+use sqlx::Row;
 
 /// PostgreSQL implementation of the AuthProvider trait
 ///
@@ -103,10 +104,13 @@ sqlx::query(
         
 
         // Retrieve user from database
-        let db_user: DbUser = match client.query_one(
-            "SELECT id, email, password_hash FROM users WHERE email = $1",
-            &[&email]
-        ) {
+        let db_user: DbUser = match sqlx::query(
+            "SELECT id, email, password_hash FROM users WHERE email = $1"
+        )
+        .bind(email)
+        .fetch_one(&mut *client)
+        .await
+        {
             Ok(row) => DbUser {
                 id: row.get(0),
                 email: row.get(1),
@@ -121,14 +125,22 @@ sqlx::query(
         }
 
         // Generate new session token
-        let token = generate_session_token();
+        // First get these tokens from somewhere (e.g., an authentication API)
+
+        let token = generate_session_token().await?;        
+
+        // Calculate expiration time (e.g., 30 days from now)
         let expires_at = Utc::now() + Duration::days(30);
-        
+
         // Store session in database
-        client.execute(
-            "INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)",
-            &[&db_user.id, &token, &expires_at]
+        sqlx::query(
+            "INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)"
         )
+        .bind(&db_user.id)
+        .bind(&token)
+        .bind(&expires_at)
+        .execute(&mut *client)
+        .await
         .map_err(|_| AuthError::DatabaseError)?;
 
         Ok(User {
@@ -146,16 +158,18 @@ sqlx::query(
     /// - Token hasn't expired
     /// - Associated user exists
     async fn validate_session(&self, token: &str) -> Result<User, AuthError> {
-        let mut client = self.pool.lock().await;
+        let mut client = self.pool.acquire().await.map_err(|_| AuthError::DatabaseError)?;
         
         // Validate session token and get user info
-        let row = client.query_one(
+        let row = sqlx::query(
             "SELECT u.id, u.email, s.expires_at 
              FROM user_sessions s
              JOIN users u ON s.user_id = u.id
-             WHERE s.token = $1 AND s.expires_at > NOW()",
-            &[&token]
+             WHERE s.token = $1 AND s.expires_at > NOW()"
         )
+        .bind(token)
+        .fetch_one(&mut *client)
+        .await
         .map_err(|_| AuthError::InvalidSession)?;
 
         Ok(User {
@@ -171,14 +185,14 @@ sqlx::query(
     /// Simply deletes the session token from the database,
     /// preventing further use of that token for authentication.
     async fn logout(&self, token: &str) -> Result<(), AuthError> {
-        let mut client = self.pool.lock().await;
+        let mut client = self.pool.acquire().await.map_err(|_| AuthError::DatabaseError)?;
         
         // Delete session token from database
-        client.execute(
-            "DELETE FROM user_sessions WHERE token = $1",
-            &[&token]
-        )
-        .map_err(|_| AuthError::DatabaseError)?;
+        sqlx::query("DELETE FROM user_sessions WHERE token = $1")
+            .bind(token)
+            .execute(&mut *client)
+            .await
+            .map_err(|_| AuthError::DatabaseError)?;
 
         Ok(())
     }

@@ -1,29 +1,54 @@
 use dioxus::prelude::{Router as DRouter, *};
 use dioxus_router::prelude::*;
-
-// login::Login
 use super::{home::Home, callback::Callback, blog::Blog};
 use crate::components::navbar::NavLink;
-
 use crate::components::{Navbar, Login, Protected};
 use crate::server::AuthContext;
 use std::sync::Arc;
 
-#[derive(Clone, Routable, Debug, PartialEq, serde::Serialize,)]
+/// Defines all application routes and their associated components.
+/// 
+/// Each route can optionally specify:
+/// - A layout component (using #[layout])
+/// - Path parameters (like `/blog/:id`)
+/// - Query parameters
+/// 
+/// The `Wrapper` component provides the common layout for all routes.
+#[derive(Clone, Routable, Debug, serde::Serialize)]
 pub enum Routes {
+    /// Root route - displays the home page
     #[layout(Wrapper)]
     #[route("/")]
     Home {},
+    
+    /// Login page route
     #[route("/login")]
     Login {},
+    
+    /// Protected content route (requires authentication)
     #[route("/protected")]
     Protected {},
+    
+    /// OAuth callback route - handles authentication responses
     #[route("/callback")]
-    Callback { auth_context: Arc<AuthContext> },
+    Callback { 
+
+    },
+    
+    /// Blog post route with dynamic ID parameter
     #[route("/blog/:id")]
-    Blog { id: i32 },
+    Blog { 
+        /// The ID of the blog post to display
+        id: i32 
+    },
 }
 
+/// The main layout wrapper for all routes.
+/// 
+/// Provides:
+/// - Navigation bar at the top
+/// - Consistent page structure
+/// - Outlet for route-specific content
 #[component]
 pub fn Wrapper() -> Element {
     rsx! {
@@ -49,21 +74,23 @@ pub fn Wrapper() -> Element {
     }
 }
 
-/// Register the protected state of routes here
+/// Determines if a route requires authentication.
+/// 
+/// Returns:
+/// - `true` if the route is protected and requires authentication
+/// - `false` if the route is publicly accessible
 fn is_guarded(current: &Routes) -> bool {
-    // guard routes
     match current {
-        Routes::Home {} => false,
-        Routes::Login {} => false,
-        Routes::Blog { id: _ } => false,
         Routes::Protected {} => true,
-        Routes::Callback { auth_context } => {
-            // Add logic if needed to determine if this route is guarded
+        Routes::Callback { } => {
+            // The callback route might need custom auth logic
             false
         },
+        _ => false, // Home, Login, Blog are public
     }
 }
 
+/// The main router component that handles navigation and route guarding.
 #[component]
 pub fn Router() -> Element {
     rsx! {
@@ -83,29 +110,44 @@ pub fn Router() -> Element {
     }
 }
 
+/// Context for handling protected route navigation.
+/// 
+/// Stores the originally requested route when authentication is required,
+/// allowing redirection back after successful login.
 #[derive(Default)]
 pub struct GuardContext {
     next: Option<Routes>,
 }
 
 impl GuardContext {
+    /// Sets the route to redirect to after authentication.
     pub fn set_next(next: Routes) {
         let mut guard = use_context::<Signal<GuardContext>>();
         guard.write().next = Some(next);
     }
 
+    /// Redirects to the stored route or falls back to home.
     pub fn redirect_next_or_home() {
         let nav = navigator();
-        let guard = use_context::<Signal<GuardContext>>();
+        let mut guard = use_context::<Signal<GuardContext>>();
         let next_maybe = guard.write().next.take();
-        if let Some(next) = next_maybe {
-            nav.push(next);
-        } else {
-            nav.push(Routes::Home {});
+        
+        match next_maybe {
+            Some(next) => { let _ = nav.push(next); },
+            None => {
+                match nav.push(Routes::Home {}) {
+                    Some(_) => {},
+                    None => log::error!("Navigation failed"),
+                }
+            },
         }
     }
 }
 
+/// Handles unauthorized access attempts.
+/// 
+/// On web targets, checks user authentication status.
+/// On other platforms, immediately executes the callback.
 fn on_not_authorized<F>(f: F)
 where
     F: Fn(()) + 'static,
@@ -113,8 +155,7 @@ where
     #[cfg(target_arch = "wasm32")]
     {
         spawn(async move {
-            let user = get_user().await;
-            if user.is_err() {
+            if get_user().await.is_err() {
                 f(());
             }
         });
@@ -125,4 +166,3 @@ where
         f(());
     }
 }
-
