@@ -1,13 +1,20 @@
 use thiserror::Error;
 
+/// Database operation errors
 #[derive(Debug, Error)]
 pub enum DbError {
-    #[error("Database error")]
-    Sqlx(#[from] sqlx::Error),
+    #[error("Database connection error")]
+    ConnectionError(#[from] sqlx::Error),
     
-    #[error("User already exists")]
-    UserExists,
+    #[error("Migration failed")]
+    MigrationError(#[from] sqlx::migrate::MigrateError),
     
-    #[error("User not found")]
-    UserNotFound,
+    #[error("Constraint violation: {0}")]
+    ConstraintViolation(String),
+    
+    #[error("Record not found")]
+    NotFound,
 }
+
+/// Alias for database results
+pub type Result<T> = std::result::Result<T, DbError>;

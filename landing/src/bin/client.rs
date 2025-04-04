@@ -1,3 +1,4 @@
+// src/bin/client.rs
 use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 use server::AuthProvider;
