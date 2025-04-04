@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 use serde_json::json;
 
 #[component]
-pub fn PostForm(cx: Scope) -> Element {
-    let title = use_state(cx, || String::new());
-    let body = use_state(cx, || String::new());
+pub fn PostForm() -> Element {
+    let title = use_signal( || String::new());
+    let body = use_signal( || String::new());
 
     rsx! {
         form {
@@ -20,9 +20,12 @@ pub fn PostForm(cx: Scope) -> Element {
             },
             input {
                 value: "{title}",
-                oninput: move |e| title.set(e.value.clone()),
+                oninput: move |e| title.set(e.value().clone()),
             }
-            textarea { value: "{body}", oninput: move |e| body.set(e.value.clone()) }
+            textarea {
+                value: "{body}",
+                oninput: move |e| body.set(e.value().clone()),
+            }
             button { "Submit Post" }
         }
     }

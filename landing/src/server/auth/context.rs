@@ -157,4 +157,37 @@ pub fn use_auth() -> AuthClient {
 
 
 
+/// Context for handling protected route navigation.
+/// 
+/// Stores the originally requested route when authentication is required,
+/// allowing redirection back after successful login.
+#[derive(Default)]
+pub struct GuardContext {
+    next: Option<Routes>,
+}
+
+impl GuardContext {
+    /// Sets the route to redirect to after authentication.
+    pub fn set_next(next: Routes) {
+        let mut guard = use_context::<Signal<GuardContext>>();
+        guard.write().next = Some(next);
+    }
+
+    /// Redirects to the stored route or falls back to home.
+    pub fn redirect_next_or_home() {
+        let nav = navigator();
+        let mut guard = use_context::<Signal<GuardContext>>();
+        let next_maybe = guard.write().next.take();
+        
+        match next_maybe {
+            Some(next) => { let _ = nav.push(next); },
+            None => {
+                match nav.push(Routes::Home {}) {
+                    Some(_) => {},
+                    None => log::error!("Navigation failed"),
+                }
+            },
+        }
+    }
+}
 

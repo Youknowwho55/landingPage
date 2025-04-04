@@ -1,5 +1,6 @@
 use sqlx::{migrate::Migrator, PgPool};
 use std::path::Path;
+use crate::db::errors::DbError;
 
 /// Runs database migrations
 pub async fn run_migrations(pool: &PgPool) -> Result<(), DbError> {

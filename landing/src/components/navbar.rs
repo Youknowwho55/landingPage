@@ -16,14 +16,3 @@ pub fn Navbar(nav_items: Vec<Element>) -> Element {
     }
 }
 
-#[component]
-pub fn NavLink(to: NavigationTarget, text: String) -> Element {
-    rsx! {
-        Link {
-            active_class: "text-white font-bold underline decoration-white",
-            class: "text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium",
-            to,
-            {text}
-        }
-    }
-}

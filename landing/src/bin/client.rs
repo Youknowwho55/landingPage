@@ -15,7 +15,6 @@ fn App() -> Element {
     
     rsx! {
         head {
-            script { src: "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" }
             link { rel: "icon", href: "/assets/favicon.ico" }
             link { rel: "stylesheet", href: "/assets/styling/main.css" }
             link { rel: "stylesheet", href: "/assets/tailwind.css" }

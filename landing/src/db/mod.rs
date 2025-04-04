@@ -10,14 +10,12 @@ mod connection;
 mod errors;
 mod models;
 mod postgres;
-mod queries;
 
 // Public interface
 pub use connection::{create_pool, DbPool};
-pub use errors::{DbError, Result};
+pub use errors::DbError;
 pub use models::{DbUser, UserSession, UserProfile};
 pub use postgres::run_migrations;
-pub use queries::{session, users};
 
 /// Re-export for convenience
 pub use sqlx::postgres::PgPool;

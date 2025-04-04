@@ -1,8 +1,9 @@
-pub mod auth {
-    pub use super::auth::{
-        AuthError,
-        AuthProvider,
-        PostgresAuth,
-        new_pg_auth,
-    };
-}
+pub mod auth;
+pub mod error;
+pub mod api;
+
+pub use error::AuthError;
+
+pub use auth::AuthProvider;
+pub use auth::AuthContext;
+pub use auth::auth_middleware;

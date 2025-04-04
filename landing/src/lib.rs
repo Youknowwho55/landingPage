@@ -4,4 +4,3 @@ pub mod views;
 pub mod server;
 pub mod db;
 
-pub use routes::Routes;

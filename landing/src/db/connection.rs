@@ -1,6 +1,6 @@
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::Duration;
-
+use crate::db::errors::DbError;
 /// Database connection pool type
 pub type DbPool = PgPool;
 

@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::server::{Credentials, AuthError};
 use crate::views::routes::{GuardContext, Routes};
 use crate::components::ui::Button;
-use crate::server::context::AuthContext;
-use crate::server::use_auth;
+use crate::auth::context::AuthContext;
+use crate::server::auth::use_auth;
 use std::rc::Rc;
 
 #[component]
